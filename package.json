@@ -4,12 +4,19 @@
   "description": "",
   "main": "bot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node bot.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^13.1.0"
+    "@discordjs/opus": "^0.5.3",
+    "@discordjs/voice": "^0.6.0",
+    "discord.js": "^13.1.0",
+    "ffmpeg-static": "^4.4.0",
+    "fs": "^0.0.1-security",
+    "libsodium-wrappers": "^0.7.9",
+    "ytdl": "^1.4.1",
+    "ytdl-core": "^4.9.1"
   }
 }

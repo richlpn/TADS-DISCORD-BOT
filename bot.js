@@ -1,13 +1,14 @@
 const { Client, Intents } = require('discord.js');
-const { getVoiceConnection, joinVoiceChannel, createAudioPlayer, NoSubscriberBehavior, createAudioResource } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, NoSubscriberBehavior, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 
 const video = require('ytdl-core');
 
 const { BOT_ID } = require('./config.json');
 const queue = new Map();
 
-const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
+const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
 
+const player = createAudioPlayer();
 
 client.on('ready', () => {
     console.log('Ready!!!');
@@ -42,7 +43,7 @@ client.on('message', async (msg) => {
         queueConstructor.songs.push(song);
         try {
 
-            queueConstructor.connection =  joinVoiceChannel({
+            queueConstructor.connection = joinVoiceChannel({
                 channelId: channel.id,
                 guildId: channel.guild.id,
                 adapterCreator: channel.guild.voiceAdapterCreator
@@ -54,6 +55,12 @@ client.on('message', async (msg) => {
             return await msg.reply(error)
         }
     }
+    else if (msg.content === 'pause') {
+        player.pause()
+    }
+    else if (msg.content === 'play') {
+        player.unpause()
+    }
 })
 function play(server, music) {
     let serverQueue = queue.get(server.id)
@@ -62,22 +69,18 @@ function play(server, music) {
         queue.delete(server.id)
         return
     }
-    // let resource = createAudioResource(video(music.url), { inlineVolume: true })
-    // const player = createAudioPlayer();
-    // console.log(resource.volume.setVolume(0.2))
-    // serverQueue.connection.subscribe(player)
-    // player.play(resource)
-    // player.on('error', error => console.log)
-    let stream = video(music.url, {
-        filter:
-            'audioonly'
-    });
-
-    let DJ = serverQueue.conn.playStream(stream);
-
-    DJ.on('end', end => {
-        VoiceChannel.leave();
-    })
+    let resource = createAudioResource(video(music.url), { inlineVolume: true })
+    resource.volume.setVolume(0.2)
+    serverQueue.connection.subscribe(player)
+    player.play(resource)
+    player.on((AudioPlayerStatus.Idle, () => {
+        player.play(getNext()
+        )
+    }
+    ))
+}
+function getNext(){
+    return queue[0]
 }
 try {
     client.login(BOT_ID)
