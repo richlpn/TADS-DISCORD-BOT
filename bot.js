@@ -67,7 +67,7 @@ function play(server, music) {
     if (!music) {
         serverQueue.VoiceChannel.leave()
         queue.delete(server.id)
-        return
+        return true
     }
     let resource = createAudioResource(video(music.url), { inlineVolume: true })
     resource.volume.setVolume(0.2)
