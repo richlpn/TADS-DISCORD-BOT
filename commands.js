@@ -11,64 +11,55 @@ class musicPlayer {
 
         this.player = createAudioPlayer();
 
-    }
 
-    async addSong(msg,musicLink) {
-        let queue = this.queue.get(msg.guild.id)
-        if (queue) {
-            let queueConstructor = {
-                textChannel: msg.channel,
-                VoiceChannel: msg.member.voice.channel,
-                connection: null,
-                songs: [],
-                volume: 5,
-                playing: true,
-            }
-            let songInfo = await ytdl.getInfo(musicLink);
-
-            let song = {
-                titulo: songInfo.videoDetails.title,
-                url: songInfo.videoDetails.video_url
-            }
-
-            await msg.reply(`${song.titulo} foi adcionada a fila`);
-
-            queueConstructor.songs.push(song);
-            this.queue.set(msg.guild.id, queueConstructor);
-            queue = this.queue.get(msg.guild.id)
-        }
-        else{
-            console.log('Done')
-        }
     }
     async musicPlay(msg, musicLink) {
         let channel = msg.member.voice.channel;
+
         if (!channel) return msg.reply('você precisa estar em um canal de voz');
 
-        this.queueConstructor = {
-            textChannel: msg.channel,
-            VoiceChannel: channel,
-            connection: null,
-            songs: [],
-            volume: 5,
-            playing: true,
+        let queueConstructor = this.queue.get(msg.guild.id)
+
+        let song;
+
+        let songInfo
+
+        try {
+            songInfo = await ytdl.getInfo(musicLink);
+
+            song = {
+                titulo: songInfo.videoDetails.title,
+
+                url: songInfo.videoDetails.video_url
+
+            }
+
+            if (queueConstructor === undefined) {
+
+                queueConstructor = {
+                    textChannel: msg.channel,
+                    VoiceChannel: channel,
+                    connection: null,
+                    songs: [],
+                    volume: 5,
+                    playing: true,
+                }
+
+                this.queue.set(msg.guild.id, queueConstructor);
+
+            }
+
+            queueConstructor.songs.push(song);
+
+        } catch (error) {
+            console.log(error)
+            return await msg.channel.send("Muscia não encontrada")
         }
-
-        let songInfo = await ytdl.getInfo(musicLink);
-
-        let song = {
-            titulo: songInfo.videoDetails.title,
-            url: songInfo.videoDetails.video_url
-        }
-
         await msg.reply(`${song.titulo} foi adcionada a fila`);
-
-        this.queue.set(msg.guild.id, this.queueConstructor);
-        this.queueConstructor.songs.push(song);
 
         try {
 
-            this.queueConstructor.connection = joinVoiceChannel({
+            queueConstructor.connection = joinVoiceChannel({
 
                 channelId: channel.id,
 
@@ -76,20 +67,22 @@ class musicPlayer {
 
                 adapterCreator: channel.guild.voiceAdapterCreator
             })
-
-            this.play(msg.guild, this.queueConstructor)
+            if (AudioPlayerStatus !== 'playing') {
+                console.log('playing')
+                this.play(msg.guild)
+            }
 
             return true;
 
         } catch (error) {
             console.log(error)
             this.queue.delete(msg.guild.id)
-            return await msg.reply(`Um erro ocorreu ${songInfo.titulo} foi removido\n${error}`)
+            return msg.reply(`Um erro ocorreu ${songInfo.titulo} foi removido\n${error}`)
         }
     }
-    play(server, queue) {
-        let music = queue.songs[0]
+    play(server) {
         let serverQueue = this.queue.get(server.id)
+        let music = serverQueue.songs[0]
 
 
         if (!music) {
@@ -100,6 +93,7 @@ class musicPlayer {
 
             return
         }
+
         let resource = createAudioResource(ytdl(music.url), { inlineVolume: true })
 
         resource.volume.setVolume(0.2)
@@ -107,12 +101,13 @@ class musicPlayer {
         serverQueue.connection.subscribe(this.player)
 
         this.player.play(resource)
+        this.player.on(AudioPlayerStatus.Idle, (e) => {
+            this.queue.get(server.id).songs.splice(0, 1)
+            this.play(server)
+        })
 
+        return
     }
-    getNext(server) {
-        console.log("getNext!!")
-    }
-
 }
 
 module.exports = { musicPlayer }

@@ -8,15 +8,16 @@ const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_
 
 let musicHandler;
 client.on('ready', () => {
-    console.log('Ready!!!');
     musicHandler = new musicPlayer(client);
+    console.log('Ready!!!');
 })
 client.on('message', async (msg) => {
     if (msg.author.bot) return;
 
     let commands = msg.content.split(" ");
+
     if (msg.content === '!ola') {
-        return msg.reply(`ola **${msg.author}`)
+        return msg.reply(`ola ${msg.author}`)
     }
     else if (commands[0] === '!add') {
         musicHandler.musicPlay(msg, commands[1])
@@ -28,12 +29,9 @@ client.on('message', async (msg) => {
     else if (msg.content === '!play') {
         player.unpause()
     }
-    else if (msg.content === "!test") {
-        try{
-
-            musicHandler.addSong(msg, commands[1])
-        }catch(error){
-            console.log(error)
+    if (msg.content === "!test") {
+        for (let i in musicHandler.player) {
+            console.log(i)
         }
     }
 })
