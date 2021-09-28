@@ -13,26 +13,26 @@ class musicPlayer {
 
 
     }
-    async musicPlay(msg, musicLink) {
-        let channel = msg.member.voice.channel;
-
-        if (!channel) return msg.reply('você precisa estar em um canal de voz');
-
-        let queueConstructor = this.queue.get(msg.guild.id)
-
-        let song;
-
-        let songInfo
-
+    async GetMusic(Link){
         try {
-            songInfo = await ytdl.getInfo(musicLink);
+            songInfo = await ytdl.getInfo(Link);
 
             song = {
                 titulo: songInfo.videoDetails.title,
 
                 url: songInfo.videoDetails.video_url
-
             }
+
+            } catch (error) {
+                console.log(error)
+                return null;
+            }
+            return song;
+
+    }
+    async CreateConstructor(msg,link) {
+
+        let queueConstructor = this.queue.get(msg.guild.id)
 
             if (queueConstructor === undefined) {
 
@@ -48,18 +48,28 @@ class musicPlayer {
                 this.queue.set(msg.guild.id, queueConstructor);
 
             }
+            let song = this.GetMusic(link)
+            if(song === null){
+                await await msg.reply("Link Invalido!!!")
+                return null    
+            }
+            await msg.reply(`${song.titulo} foi adcionada a fila`);
+            queueConstructor.songs.push(song)
+            return queueConstructor;
 
-            queueConstructor.songs.push(song);
+    }
+    async musicPlay(msg, musicLink) {
+        let channel = msg.member.voice.channel;
 
-        } catch (error) {
-            console.log(error)
-            return await msg.channel.send("Muscia não encontrada")
-        }
-        await msg.reply(`${song.titulo} foi adcionada a fila`);
+        if (!channel) return msg.reply('você precisa estar em um canal de voz');
+
+        let currentConstructor = this.CreateConstructor(msg,musicLink);
+
+        if(currentConstructor !== null)return       
 
         try {
 
-            queueConstructor.connection = joinVoiceChannel({
+            currentConstructor.connection = joinVoiceChannel({
 
                 channelId: channel.id,
 
@@ -67,12 +77,10 @@ class musicPlayer {
 
                 adapterCreator: channel.guild.voiceAdapterCreator
             })
-            if (AudioPlayerStatus !== 'playing') {
-                console.log('playing')
-                this.play(msg.guild)
+            if (currentConstructor.songs.lenght > 0) {
+                await msg.reply("Playing")
+                // this.play(msg.guild)
             }
-
-            return true;
 
         } catch (error) {
             console.log(error)
@@ -80,11 +88,11 @@ class musicPlayer {
             return msg.reply(`Um erro ocorreu ${songInfo.titulo} foi removido\n${error}`)
         }
     }
-    play(server) {
+    async play(server) {
         let serverQueue = this.queue.get(server.id)
         let music = serverQueue.songs[0]
 
-
+        await serverQueue.textChannel.send(`Tocando ${music.titulo}`)
         if (!music) {
 
             serverQueue.VoiceChannel.leave()
